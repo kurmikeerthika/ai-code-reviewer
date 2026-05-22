@@ -29,3 +29,6 @@ chroma_db/
 
 # Uploaded files (temporary)
 uploads/
+
+
+**/__pycache__/
