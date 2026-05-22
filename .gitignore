@@ -1,0 +1,31 @@
+
+# Environment variables (NEVER commit this)
+.env
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ChromaDB data
+chroma_db/
+
+# Test cache
+.pytest_cache/
+.coverage
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Uploaded files (temporary)
+uploads/
