@@ -1,0 +1,110 @@
+# docker-compose.yml
+# Development configuration for the AI Code Reviewer.
+#
+# Services:
+#   app     — The FastAPI application
+#   nginx   — Reverse proxy (routes traffic to app)
+#
+# Usage:
+#   docker compose up --build       Start everything (rebuild image)
+#   docker compose up -d            Start in background
+#   docker compose down             Stop everything
+#   docker compose logs -f app      Follow app logs
+#   docker compose exec app bash    Open shell in container
+
+version: "3.9"
+
+services:
+
+  # ── FastAPI Application ──────────────────────────────────────
+  app:
+    # Build from our Dockerfile in the current directory
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final          # Use the final (slim) stage
+
+    # Container name for easy reference
+    container_name: ai-code-reviewer-app
+
+    # Load all environment variables from .env file
+    env_file:
+      - .env
+
+    # Override specific variables for Docker environment
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=1
+      - LOG_LEVEL=info
+      # ChromaDB path inside the container
+      - CHROMA_PERSIST_DIRECTORY=/app/chroma_db
+
+    # Port mapping: host:container
+    # Access the app at http://localhost:8000
+    ports:
+      - "8000:8000"
+
+    # Volumes: persist data outside the container
+    # If the container restarts, data survives
+    volumes:
+      # ChromaDB vector store data
+      - chroma_data:/app/chroma_db
+      # Application logs
+      - app_logs:/app/logs
+      # Mount source code for development (hot reload)
+      - ./app:/app/app
+
+    # Health check — Docker monitors this
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Restart policy
+    # unless-stopped: restart on crash, but not on manual `docker stop`
+    restart: unless-stopped
+
+    # Resource limits (prevents runaway memory usage)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+
+  # ── Nginx Reverse Proxy ──────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: ai-code-reviewer-nginx
+
+    ports:
+      - "80:80"           # HTTP on port 80
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      app:
+        condition: service_healthy   # Wait until app passes health check
+
+    restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+
+
+# ── Named Volumes ────────────────────────────────────────────
+# Named volumes persist data between container restarts
+volumes:
+  chroma_data:
+    driver: local
+  app_logs:
+    driver: local

@@ -1,0 +1,245 @@
+{
+  "info": {
+    "name": "AI Code Reviewer API",
+    "description": "Complete API collection for the AI Code Reviewer project.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "description": "Change to http://localhost if using Nginx"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "description": "Auto-filled after upload request"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/",
+            "description": "Confirms API is running"
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "description": "Health status for Docker monitoring"
+          }
+        },
+        {
+          "name": "App Info",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/info",
+            "description": "Non-sensitive config info"
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload Python File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set('session_id', data.session_id);",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has session_id', () => pm.expect(data.session_id).to.be.a('string'));",
+                  "pm.test('Has files array', () => pm.expect(data.files).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/upload/",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select your Python file here"
+                }
+              ]
+            },
+            "description": "Upload a .py file. session_id is auto-saved to collection variables."
+          }
+        },
+        {
+          "name": "Upload Multiple Files",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/upload/",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "files", "type": "file", "src": []},
+                {"key": "files", "type": "file", "src": []}
+              ]
+            },
+            "description": "Upload multiple files at once (max 10)"
+          }
+        },
+        {
+          "name": "Supported Languages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/upload/supported-languages"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RAG Pipeline",
+      "item": [
+        {
+          "name": "Search Code (with session filter)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/rag/search",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SQL injection vulnerability\",\n  \"session_id\": \"{{session_id}}\",\n  \"top_k\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Search Code (global)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/rag/search",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"hardcoded password secret\",\n  \"top_k\": 3\n}"
+            }
+          }
+        },
+        {
+          "name": "ChromaDB Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/rag/stats"
+          }
+        },
+        {
+          "name": "Delete Session Chunks",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/rag/session/{{session_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Code Review",
+      "item": [
+        {
+          "name": "Trigger Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "var data = pm.response.json();",
+                  "pm.test('Has statistics', () => pm.expect(data.statistics).to.exist);",
+                  "pm.test('Has issues', () => pm.expect(data.issues).to.exist);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/review/",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\"\n}"
+            },
+            "description": "Trigger the 5-agent AI pipeline. Takes 30-90 seconds."
+          }
+        },
+        {
+          "name": "Get Review Report",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/review/{{session_id}}",
+            "description": "Fetch a completed review report"
+          }
+        },
+        {
+          "name": "List All Sessions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/review/sessions/list"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GitHub Integration",
+      "item": [
+        {
+          "name": "Get PR Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/github/pr-info?pr_url=https://github.com/fastapi/fastapi/pull/1",
+              "query": [
+                {
+                  "key": "pr_url",
+                  "value": "https://github.com/fastapi/fastapi/pull/1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review PR (no comment)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/github/review-pr",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pr_url\": \"https://github.com/YOUR_USERNAME/YOUR_REPO/pull/1\",\n  \"post_comment\": false,\n  \"max_files\": 3\n}"
+            },
+            "description": "Review PR without posting comment — test mode"
+          }
+        },
+        {
+          "name": "Review PR (post comment)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/github/review-pr",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pr_url\": \"https://github.com/YOUR_USERNAME/YOUR_REPO/pull/1\",\n  \"post_comment\": true,\n  \"max_files\": 5\n}"
+            },
+            "description": "Review PR and post findings as a GitHub comment"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+# docker-compose.prod.yml
+# Production overrides — used with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Changes from development:
+#   - More workers (handles more concurrent requests)
+#   - No source code volume mount (use baked-in code)
+#   - Stricter resource limits
+#   - Production log level
+
+version: "3.9"
+
+services:
+
+  app:
+    # In production, don't mount source code as a volume
+    # Use the code baked into the image at build time
+    volumes:
+      - chroma_data:/app/chroma_db
+      - app_logs:/app/logs
+      # NOTE: no ./app:/app/app mount here
+
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=4           # More workers for production traffic
+      - LOG_LEVEL=warning   # Less verbose in production
+      - DEBUG=false
+      - CHROMA_PERSIST_DIRECTORY=/app/chroma_db
+
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4.0"
+        reservations:
+          memory: 1G
+          cpus: "1.0"
+      # Restart failed containers automatically
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"         # HTTPS in production
+
+volumes:
+  chroma_data:
+    driver: local
+  app_logs:
+    driver: local
