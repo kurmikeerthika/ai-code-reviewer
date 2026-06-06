@@ -59,10 +59,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /install /usr/local
 
 # Copy application source code
-COPY app/ ./app/
+COPY backend/app/ ./app/
 
 # Copy startup scripts
-COPY scripts/ ./scripts/
+COPY backend/scripts/ ./scripts/
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
@@ -81,7 +81,7 @@ RUN chown -R appuser:appgroup /app
 # Switch to non-root user
 USER appuser
 
-# Tell Docker this container listens on port 8000
+# Tell Docker this container listens on port 8000s
 EXPOSE 8000
 
 # Health check — Docker will restart the container if this fails
