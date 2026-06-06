@@ -1,8 +1,8 @@
---AI Code Reviewer--
+## AI Code Reviewer
 
 AI Code Reviewer is a full-stack application that helps developers analyze and review source code using AI. The project combines FastAPI, React, Groq LLMs, and ChromaDB to provide automated code review suggestions, bug detection, security analysis, and code quality improvements.
 
-##What it does
+## What it does
 
 * Upload source code files
 * Analyze code using AI
@@ -11,7 +11,7 @@ AI Code Reviewer is a full-stack application that helps developers analyze and r
 * Store and search code context using a RAG pipeline
 * Support GitHub-based code review workflows
 
-##Tech Stack
+## Tech Stack
 
 **Frontend**
 
